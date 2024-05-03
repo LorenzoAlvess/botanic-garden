@@ -1,10 +1,20 @@
 from django.db import models
 from botanic.models import Species
 
+
+class Garden(models.Model):
+    name = models.CharField(max_length=255)
+    location = models.CharField(max_length=255)
+    plants = models.ManyToManyField(Species, through='PlantLocation')
+
+    def __str__(self):
+        return self.name
+    
 class Event(models.Model):
     name = models.CharField(max_length=255)
     date = models.DateField()
     description = models.TextField()
+    garden = models.ManyToManyField(Garden)
 
     def __str__(self):
         return self.name
@@ -19,11 +29,4 @@ class PlantLocation(models.Model):
     def __str__(self):
         return f"{self.garden.name} - {self.species.name}"
 
-class Garden(models.Model):
-    name = models.CharField(max_length=255)
-    location = models.CharField(max_length=255)
-    events = models.ManyToManyField(Event)
-    plants = models.ManyToManyField(Species, through='PlantLocation')
 
-    def __str__(self):
-        return self.name
