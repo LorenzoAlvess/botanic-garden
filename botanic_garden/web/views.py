@@ -1,33 +1,54 @@
 from django.shortcuts import render
 from garden.models import PlantLocation
-import random
+from django.http import JsonResponse
+from botanic.models import Family, Genus, Species
 import json
 
 def plant_map(request):
-    # Exemplo de dados estáticos
-    static_plant_locations = [
-        {'latitude': -18.675569, 'longitude': -39.862455, 'garden_name': 'Jardim Botânico', 'species_name': 'Rosa'},
-        {'latitude': -18.675100, 'longitude': -39.862700, 'garden_name': 'Jardim Botânico', 'species_name': 'Orquídea'},
-        {'latitude': -18.675800, 'longitude': -39.862200, 'garden_name': 'Jardim Botânico', 'species_name': 'Lírio'},
-    ]
-    
-    # Gerar novas localizações aleatórias para alcançar pelo menos 10
-    num_new_locations = 10 - len(static_plant_locations)
-    for _ in range(num_new_locations):
-        # Simulação de novas localizações próximas
-        lat = random.uniform(-18.676, -18.674)
-        lng = random.uniform(-39.863, -39.861)
-        plant_name = random.choice(['Girassol', 'Tulipa', 'Cacto', 'Bromélia', 'Hortênsia'])
-        static_plant_locations.append({
-            'latitude': lat,
-            'longitude': lng,
-            'garden_name': 'Jardim Botânico',
-            'species_name': plant_name
+    # Recuperar parâmetros de filtro
+    family_id = request.GET.get('family')
+    genus_id = request.GET.get('genus')
+    species_id = request.GET.get('species')
+
+    # Recuperar dados do modelo PlantLocation com base nos filtros
+    plant_locations = PlantLocation.objects.all()
+
+    if family_id:
+        plant_locations = plant_locations.filter(species__genus__family__id=family_id)
+    if genus_id:
+        plant_locations = plant_locations.filter(species__genus__id=genus_id)
+    if species_id:
+        plant_locations = plant_locations.filter(species__id=species_id)
+
+    # Preparar os dados para o JSON
+    plant_data = []
+    for location in plant_locations:
+        plant_data.append({
+            'latitude': location.latitude,
+            'longitude': location.longitude,
+            'garden_name': location.garden.name,
+            'species_name': location.species.name
         })
 
     # Convertendo os dados para JSON
-    static_plant_data_json = json.dumps(static_plant_locations)
-    return render(request, 'plant_map.html', {'plant_data_json': static_plant_data_json})
+    plant_data_json = json.dumps(plant_data)
+
+    # Dados para os filtros, ordenados alfabeticamente
+    families = Family.objects.all().order_by('name')
+    genera = Genus.objects.all().order_by('name')
+    species_list = Species.objects.all().order_by('name')
+
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({'plant_data': plant_data})
+    
+    return render(request, 'plant_map.html', {
+        'plant_data_json': plant_data_json,
+        'families': families,
+        'genera': genera,
+        'species_list': species_list
+    })
+
+
 
 
 def index(request):

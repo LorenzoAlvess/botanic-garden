@@ -5,7 +5,7 @@ class Family(models.Model):
     """
     Represents a botanical family.
     """
-    name = models.CharField(max_length=255, help_text="Name of the family.")
+    name = models.CharField(max_length=255, unique=True, help_text="Name of the family.")
     description = models.TextField(blank=True, help_text="Description of the family.")
 
     def __str__(self):
@@ -16,7 +16,7 @@ class Genus(models.Model):
     """
     Represents a botanical genus.
     """
-    name = models.CharField(max_length=255, help_text="Name of the genus.")
+    name = models.CharField(max_length=255, unique=True, help_text="Name of the genus.")
     family = models.ForeignKey(Family, on_delete=models.CASCADE, help_text="Family to which the genus belongs.")
     description = models.TextField(blank=True, help_text="Description of the genus.")
 
@@ -28,7 +28,7 @@ class Species(models.Model):
     """
     Represents a botanical species.
     """
-    name = models.CharField(max_length=255, help_text="Name of the species.")
+    name = models.CharField(max_length=255, unique=True, help_text="Name of the species.")
     genus = models.ForeignKey(Genus, on_delete=models.CASCADE, help_text="Genus to which the species belongs.")
     description = models.TextField(blank=True, help_text="Description of the species.")
     blooming_season = models.CharField(max_length=50, blank=True, help_text="Blooming season of the species.")
@@ -44,7 +44,7 @@ class Collection(models.Model):
     """
     Represents a botanical collection.
     """
-    name = models.CharField(max_length=255, help_text="Name of the collection.")
+    name = models.CharField(max_length=255, unique=True, help_text="Name of the collection.")
     description = models.TextField(blank=True, help_text="Description of the collection.")
 
     def __str__(self):

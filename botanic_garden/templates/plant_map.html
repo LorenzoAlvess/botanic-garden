@@ -4,40 +4,125 @@
 
 {% block content %}
 <style>
-    /* Estilos CSS para o mapa */
     #map {
         position: absolute;
         top: 0;
         left: 0;
         width: 100%;
-        height: 100vh; /* Ajusta a altura para ocupar toda a altura da viewport */
+        height: 100vh;
+    }
+    #filterForm {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        background-color: white;
+        padding: 10px;
+        z-index: 1000;
+        border-radius: 5px;
+        box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.5);
     }
 </style>
 
+<div id="filterForm">
+    <form id="filter-form">
+        <label for="family">Family:</label>
+        <input id="family" name="family" autocomplete="off">
+        
+        <label for="genus">Genus:</label>
+        <input id="genus" name="genus" autocomplete="off">
+
+        <label for="species">Species:</label>
+        <input id="species" name="species" autocomplete="off">
+
+        <button type="submit">Filter</button>
+    </form>
+</div>
+
 <div id="map"></div>
+
 <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
 
 <script>
-    var map = L.map('map').setView([-18.675569, -39.862455], 17); // Define o centro do mapa e o nível de zoom inicial
-
+    var map = L.map('map').setView([-18.675569, -39.862455], 17);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
     }).addTo(map);
 
-    // Define um novo ícone de plantinha
     var plantIcon = L.divIcon({
         html: '<i class="fas fa-seedling" style="color: green; font-size: 24px;"></i>',
         iconSize: [24, 24],
-        className: 'custom-icon' // Adiciona uma classe para que possamos adicionar estilos CSS se necessário
+        className: 'custom-icon'
     });
 
-    // Adiciona marcadores para cada localização de planta com o novo ícone
     var plantData = {{ plant_data_json|safe }};
-    plantData.forEach(function(plant) {
-        L.marker([plant.latitude, plant.longitude], {icon: plantIcon}).addTo(map)
-            .bindPopup(plant.garden_name + ' - ' + plant.species_name);
+    var markers = [];
+
+    function updateMarkers(plantData) {
+        // Remove existing markers
+        markers.forEach(function(marker) {
+            map.removeLayer(marker);
+        });
+        markers = [];
+
+        // Add new markers
+        plantData.forEach(function(plant) {
+            var marker = L.marker([plant.latitude, plant.longitude], {icon: plantIcon})
+                .addTo(map)
+                .bindPopup(plant.garden_name + ' - ' + plant.species_name);
+            markers.push(marker);
+        });
+    }
+
+    updateMarkers(plantData);
+
+    // Handle filter form submission via AJAX
+    document.getElementById('filter-form').addEventListener('submit', function(event) {
+        event.preventDefault();
+
+        var formData = new FormData(this);
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', `{% url 'web:plant_map' %}?${new URLSearchParams(formData).toString()}`, true);
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState == 4 && xhr.status == 200) {
+                var response = JSON.parse(xhr.responseText);
+                updateMarkers(response.plant_data);
+            }
+        };
+        xhr.send();
+    });
+
+    // Autocomplete for Family, Genus, and Species
+    $(function() {
+        var families = [{% for family in families %}{ label: "{{ family.name }}", value: "{{ family.id }}" }, {% endfor %}];
+        var genera = [{% for genus in genera %}{ label: "{{ genus.name }}", value: "{{ genus.id }}" }, {% endfor %}];
+        var species = [{% for species in species_list %}{ label: "{{ species.name }}", value: "{{ species.id }}" }, {% endfor %}];
+
+        $("#family").autocomplete({
+            source: families,
+            select: function(event, ui) {
+                $("#family").val(ui.item.label);
+                $("#family").data("id", ui.item.value);
+            }
+        });
+
+        $("#genus").autocomplete({
+            source: genera,
+            select: function(event, ui) {
+                $("#genus").val(ui.item.label);
+                $("#genus").data("id", ui.item.value);
+            }
+        });
+
+        $("#species").autocomplete({
+            source: species,
+            select: function(event, ui) {
+                $("#species").val(ui.item.label);
+                $("#species").data("id", ui.item.value);
+            }
+        });
     });
 </script>
 {% endblock %}
